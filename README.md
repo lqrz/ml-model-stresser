@@ -76,3 +76,11 @@ A lightweight **C server** accepts requests and fans them out to multiple **Pyth
 - Swap between TCP/UDP by running the corresponding server binary.
 
 ---
+
+## Example
+
+Below is an example of `ml-model-stresser` in action:
+
+![Example Run](resources/readme/example.png)
+
+---
