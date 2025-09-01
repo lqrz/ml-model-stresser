@@ -1,0 +1,16 @@
+# Doxyfile (minimal)
+PROJECT_NAME           = "ml-model-stresser"
+OUTPUT_DIRECTORY       = docs
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+RECURSIVE              = YES
+INPUT                  = src
+FILE_PATTERNS          = *.c *.h
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_LOCAL_METHODS  = YES
+JAVADOC_AUTOBRIEF      = YES
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+
