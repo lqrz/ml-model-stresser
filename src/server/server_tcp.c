@@ -7,23 +7,25 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define SERVER_PORT 6160
 #define WORKER_COUNT 3
 #define WORKER_BASE_PORT 9001
+#define WORKER_SCRIPT "src/worker/worker.py"
 
 pid_t worker_pids[WORKER_COUNT];
 int current_worker = 0;
 
 // Spawn Python workers on different ports
-void spawn_workers() {
+void spawn_workers(void) {
     for (int i = 0; i < WORKER_COUNT; i++) {
         pid_t pid = fork();
         if (pid == 0) {
             char port_str[6];
             sprintf(port_str, "%d", WORKER_BASE_PORT + i);
             // execlp("python3", "python3", "worker.py", port_str, NULL);
-            execlp("python3", "python3", "worker_predictor.py", port_str, NULL);
+            execlp("python3", "python3", WORKER_SCRIPT, port_str, NULL);
             perror("execlp failed");
             exit(1);
         } else {
@@ -71,7 +73,7 @@ void forward_to_worker(const char *message, char *response) {
     close(sock);
 }
 
-int main() {
+int main(void) {
     spawn_workers();
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
