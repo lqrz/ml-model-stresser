@@ -62,13 +62,13 @@ A lightweight **C server** accepts requests and fans them out to multiple **Pyth
   - Simple linked-list queue (`queue.h/.c`) protected by a mutex/condition variable.
 
 ### **Worker Side (Python)**
-- Example: [`worker.py`](worker.py)
+- Example: [`src/worker/worker.py`](src/worker/worker.py)
   - Minimal UDP server that:
     - Listens on assigned port.
     - Receives a message.
     - Sends back a canned response (placeholder for model output).
   - Contains commented hints for parsing JSON and returning actual predictions.
-- The C server also supports [`worker/worker.py`](worker.py) for real model-serving.
+- The C server also supports [`src/worker/worker.py`](src/worker/worker.py) for real model-serving.
 - **Defaults:**
   - Server port: `6160`
   - Worker base port: `9001`
