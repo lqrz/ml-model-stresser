@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include "queue.h"
 
-/** @copydoc create_queue */
+/* See queue.h for API documentation. */
 queue_t* create_queue(void){
     queue_t *q = malloc(sizeof(queue_t));
     q->head = NULL;
@@ -33,7 +33,7 @@ queue_t* create_queue(void){
     return q;
 }
 
-/** @copydoc enqueue */
+/* See queue.h for API documentation. */
 void enqueue(queue_t *q, request_t *request){
     // create new node
     node_t *new_node = malloc(sizeof(node_t));
@@ -49,7 +49,7 @@ void enqueue(queue_t *q, request_t *request){
     q->tail = new_node;
 }
 
-/** @copydoc dequeue */
+/* See queue.h for API documentation. */
 request_t* dequeue(queue_t *q){
     if(q->head == NULL){
         // no elements in the queue
