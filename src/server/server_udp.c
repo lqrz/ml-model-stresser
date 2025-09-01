@@ -180,6 +180,7 @@ void * thread_handler(void *arg){
  *
  * @return 0 on normal termination (never reached in typical run).
  */
+#ifndef UNIT_TEST
 int main() {
     queue_t *q = create_queue();
 
@@ -260,3 +261,4 @@ int main() {
 
     return 0;
 }
+#endif

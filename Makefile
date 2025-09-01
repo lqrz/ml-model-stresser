@@ -126,3 +126,37 @@ distclean: clean
 	@find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 	@echo "Fully cleaned."
 
+
+/* =========================== cmocka unit tests from tests/unit/*.c =========================== */
+
+CMOCKA_CFLAGS := $(shell pkg-config --cflags cmocka 2>/dev/null)
+CMOCKA_LIBS   := $(shell pkg-config --libs   cmocka 2>/dev/null)
+CMOCKA_LIBS   := $(if $(CMOCKA_LIBS),$(CMOCKA_LIBS),-lcmocka)
+
+TEST_CFLAGS   := -Wall -Wextra -Werror -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -Wno-deprecated-declarations
+TEST_INCLUDES := -Isrc
+
+TEST_OBJS     := src/server/queue.o
+
+TEST_SRCS := $(wildcard tests/server/*_cmocka.c)
+TEST_BINS := $(TEST_SRCS:.c=)
+
+.PHONY: unit-tests
+unit-tests: $(TEST_BINS)
+	@for t in $(TEST_BINS); do \
+		echo "Running $$t"; \
+		./$$t; \
+		rm -f $$t; \
+		rm -rf $$t.dSYM; \
+	done
+
+# compile the server object(s) if not already
+src/server/%.o: src/server/%.c src/server/%.h
+	$(CC) -DUNIT_TEST -c -g -O2 -Wall -Wextra -Isrc -o $@ $<
+
+# pattern rule: build each test binary from its .c plus the needed objs
+tests/server/%: tests/server/%.c $(TEST_OBJS)
+	$(CC) -DUNIT_TEST $(TEST_CFLAGS) $(TEST_INCLUDES) $(CMOCKA_CFLAGS) -o $@ $^ $(CMOCKA_LIBS)
+
+.INTERMEDIATE: $(TEST_BINS)
+.DELETE_ON_ERROR:
