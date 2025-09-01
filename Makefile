@@ -138,7 +138,7 @@ TEST_INCLUDES := -Isrc
 
 TEST_OBJS     := src/server/queue.o
 
-TEST_SRCS := $(wildcard tests/unit/*_cmocka.c)
+TEST_SRCS := $(wildcard tests/server/*_cmocka.c)
 TEST_BINS := $(TEST_SRCS:.c=)
 
 .PHONY: unit-tests
@@ -155,7 +155,7 @@ src/server/%.o: src/server/%.c src/server/%.h
 	$(CC) -DUNIT_TEST -c -g -O2 -Wall -Wextra -Isrc -o $@ $<
 
 # pattern rule: build each test binary from its .c plus the needed objs
-tests/unit/%: tests/unit/%.c $(TEST_OBJS)
+tests/server/%: tests/server/%.c $(TEST_OBJS)
 	$(CC) -DUNIT_TEST $(TEST_CFLAGS) $(TEST_INCLUDES) $(CMOCKA_CFLAGS) -o $@ $^ $(CMOCKA_LIBS)
 
 .INTERMEDIATE: $(TEST_BINS)
