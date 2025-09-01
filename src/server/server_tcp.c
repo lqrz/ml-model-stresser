@@ -1,3 +1,25 @@
+/**
+ * @file server_tcp.c
+ * @brief TCP front-end server for spawning Python worker processes.
+ *
+ * The server listens on SERVER_PORT, accepts client TCP connections,
+ * and forwards each request to one of several Python workers. Each worker
+ * listens on its own port (starting at WORKER_BASE_PORT), runs a model
+ * inference (or other logic), and returns a JSON response.
+ *
+ * Workflow:
+ * 1. Spawn WORKER_COUNT Python worker processes on sequential ports.
+ * 2. Listen on SERVER_PORT for incoming client requests.
+ * 3. For each request:
+ *    - Round-robin select a worker.
+ *    - Forward the request to the worker.
+ *    - Send the worker's response back to the client.
+ * 4. On termination, gracefully stop workers.
+ *
+ * @note This implementation uses fork()/execlp() to start Python processes
+ *       and simple round-robin scheduling for load balancing.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,15 +31,23 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define SERVER_PORT 6160
-#define WORKER_COUNT 3
-#define WORKER_BASE_PORT 9001
-#define WORKER_SCRIPT "src/worker/worker.py"
+#define SERVER_PORT 6160 /**< Port where this TCP server listens */
+#define WORKER_COUNT 3 /**< Number of Python worker processes */
+#define WORKER_BASE_PORT 9001 /**< Path to Python worker script */
+#define WORKER_SCRIPT "src/worker/worker.py" /**< Path to Python worker script */
 
-pid_t worker_pids[WORKER_COUNT];
-int current_worker = 0;
+pid_t worker_pids[WORKER_COUNT]; /**< PIDs of spawned workers */
+int current_worker = 0; /**< Index of next worker in round-robin */
 
-// Spawn Python workers on different ports
+/**
+ * @brief Spawn Python workers on sequential ports.
+ *
+ * Forks the current process WORKER_COUNT times. Each child process
+ * replaces itself with a Python worker (`execlp("python3", WORKER_SCRIPT, port)`).
+ *
+ * @note The worker ports are calculated as WORKER_BASE_PORT + i.
+ *       Worker PIDs are stored in @ref worker_pids.
+ */
 void spawn_workers(void) {
     for (int i = 0; i < WORKER_COUNT; i++) {
         pid_t pid = fork();
@@ -34,6 +64,15 @@ void spawn_workers(void) {
     }
 }
 
+/**
+ * @brief Escape JSON-special characters in a string.
+ *
+ * Inserts backslashes before quotes (") and backslashes (\\) to make
+ * the string JSON-safe.
+ *
+ * @param input Original string.
+ * @param output Buffer to hold the escaped string (must be large enough).
+ */
 void escape_json(const char *input, char *output) {
     while (*input) {
         if (*input == '\"' || *input == '\\') {
@@ -44,7 +83,15 @@ void escape_json(const char *input, char *output) {
     *output = '\0';
 }
 
-// Forward request to a worker and get response
+/**
+ * @brief Forward a message to a worker and retrieve the response.
+ *
+ * Selects a worker port in round-robin fashion, connects to the worker,
+ * sends the request as a JSON object, and waits for the response.
+ *
+ * @param message  The raw message string received from the client.
+ * @param response Buffer to hold the worker's JSON response.
+ */
 void forward_to_worker(const char *message, char *response) {
     int worker_port = WORKER_BASE_PORT + current_worker;
     current_worker = (current_worker + 1) % WORKER_COUNT;
@@ -73,6 +120,16 @@ void forward_to_worker(const char *message, char *response) {
     close(sock);
 }
 
+/**
+ * @brief Main entry point.
+ *
+ * - Spawns worker processes
+ * - Initializes TCP server socket
+ * - Accepts client requests and forwards them to workers
+ * - Cleans up workers on termination
+ *
+ * @return 0 on success, non-zero on error
+ */
 int main(void) {
     spawn_workers();
 
@@ -103,7 +160,7 @@ int main(void) {
         close(client_socket);
     }
 
-    // Clean up workers (optional)
+    // Clean up workers
     for (int i = 0; i < WORKER_COUNT; i++) {
         kill(worker_pids[i], SIGTERM);
         wait(NULL);

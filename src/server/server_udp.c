@@ -1,3 +1,21 @@
+/**
+ * @file server_udp.c
+ * @brief UDP server with thread pool dispatching to Python workers.
+ *
+ * This server implements a multi-threaded model:
+ * - A UDP socket listens on SERVER_PORT.
+ * - Each incoming datagram is wrapped into a @ref request_t and enqueued.
+ * - A fixed-size thread pool waits on the queue.
+ * - Each thread spawns a dedicated Python worker (bound to a unique port).
+ * - Threads dequeue requests and forward them to their worker, then send
+ *   the worker’s response back to the client via UDP.
+ *
+ * Synchronization is provided with a global mutex and condition variable.
+ *
+ * @note This implementation uses fork()/execlp() to start Python processes
+ *       and simple round-robin scheduling for load balancing.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,21 +28,38 @@
 #include <pthread.h>
 #include "queue.h"
 
-#define SERVER_PORT 6160
-#define WORKER_BASE_PORT 9001
-#define THREAD_POOL_SIZE 3
-#define BUFFER_SIZE 1024
+#define SERVER_PORT 6160 /**< UDP server listening port */
+#define WORKER_BASE_PORT 9001 /**< Base port where Python workers start */
+#define THREAD_POOL_SIZE 3 /**< Number of threads in the pool */
+#define BUFFER_SIZE 1024 /**< Buffer size for requests/responses */
 
+/**
+ * @struct thread_arg_t
+ * @brief Arguments passed to each worker thread.
+ *
+ * Contains a reference to the shared request queue and the unique
+ * port number where this thread’s Python worker is listening.
+ */
 typedef struct {
-    queue_t *queue;
-    int *python_worker_port;
+    queue_t *queue; /**< Shared request queue */
+    int *python_worker_port; /**< Port number assigned to this thread's worker */
 } thread_arg_t;
 
-pthread_t THREAD_POOL[THREAD_POOL_SIZE];
-thread_arg_t *THREAD_ARGS[THREAD_POOL_SIZE];
-pthread_mutex_t QUEUE_MUTEX= PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t IS_NOT_EMPTY_QUEUE = PTHREAD_COND_INITIALIZER;
+/* --- Global thread pool state --- */
+pthread_t THREAD_POOL[THREAD_POOL_SIZE]; /**< Array of thread IDs */
+thread_arg_t *THREAD_ARGS[THREAD_POOL_SIZE]; /**< Array of per-thread args */
+pthread_mutex_t QUEUE_MUTEX= PTHREAD_MUTEX_INITIALIZER; /**< Protects queue access */
+pthread_cond_t IS_NOT_EMPTY_QUEUE = PTHREAD_COND_INITIALIZER; /**< Signals non-empty */
 
+/**
+ * @brief Spawn a Python worker process on the given port.
+ *
+ * Forks the process and execs the Python worker script, binding
+ * it to the port provided via *worker_port.
+ *
+ * @param worker_port Pointer to port number for the worker.
+ * @return PID of the spawned process (parent context only).
+ */
 pid_t spawn_worker(int *worker_port){
     pid_t pid = fork();
     if(pid == 0){
@@ -39,7 +74,16 @@ pid_t spawn_worker(int *worker_port){
     return pid;
 }
 
-// forward request to a worker and get response 
+/**
+ * @brief Forward a request to a Python worker and receive a response.
+ *
+ * Creates a UDP socket, sends the given message to the worker, and waits
+ * for the response.
+ *
+ * @param message   Request payload to send (string).
+ * @param response  Buffer to hold the worker’s response.
+ * @param worker_port Pointer to the port number of the worker.
+ */
 void forward_to_worker(const char *message, char *response, int *worker_port) {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
@@ -75,6 +119,13 @@ void forward_to_worker(const char *message, char *response, int *worker_port) {
     close(sock);
 }
 
+/**
+ * @brief Handle a single client connection by forwarding to a worker.
+ *
+ * @param r           Pointer to the request structure with client info.
+ * @param worker_port Pointer to the Python worker’s port number.
+ * @return Always NULL (to match pthread signature).
+ */
 void * handle_connection(request_t *r, int *worker_port){
     
     // printf("Replying to client\n");
@@ -88,6 +139,17 @@ void * handle_connection(request_t *r, int *worker_port){
     sendto(r->server_socket, response, strlen(response), 0, (struct sockaddr *)&(r->client_addr), r->addr_len);
 }
 
+/**
+ * @brief Thread entry point: spawn worker and process requests.
+ *
+ * Each thread:
+ * - Spawns its own Python worker.
+ * - Waits for requests in the shared queue.
+ * - Processes requests as they arrive by calling handle_connection().
+ *
+ * @param arg Pointer to a thread_arg_t struct.
+ * @return Always NULL.
+ */
 void * thread_handler(void *arg){
     thread_arg_t *thread_arg = (thread_arg_t *)arg;
     printf("im inside thread_handler init\n");
@@ -108,8 +170,17 @@ void * thread_handler(void *arg){
     }
 }
 
+/**
+ * @brief Main entry point for the UDP server.
+ *
+ * - Initializes the request queue.
+ * - Creates THREAD_POOL_SIZE worker threads, each with its own worker port.
+ * - Binds a UDP socket on SERVER_PORT.
+ * - Receives datagrams, wraps them into request_t structs, and enqueues them.
+ *
+ * @return 0 on normal termination (never reached in typical run).
+ */
 int main() {
-    
     queue_t *q = create_queue();
 
     // instantiate threadpool

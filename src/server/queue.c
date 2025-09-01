@@ -1,13 +1,31 @@
-//
-//  queue.c
-//  queue
-//
-//  Created by lautaro.quiroz on 4/6/25.
-//
+/**
+ * @file queue.c
+ * @brief Linked-list based queue for request_t elements.
+ *
+ * This module implements FIFO queue where each node stores a
+ * pointer to a `request_t`. It supports enqueue and dequeue operations.
+ *
+ *
+ * Typical usage:
+ * @code
+ *   queue_t* q = create_queue();
+ *   enqueue(q, req1);
+ *   enqueue(q, req2);
+ *   request_t* r = dequeue(q);
+ *   // ...
+ * @endcode
+ *
+ * @note Memory for nodes is allocated with malloc() and freed on dequeue.
+ *       The caller is responsible for freeing the actual `request_t` objects
+ *       once done with them.
+ * 
+ * Created by lautaro.quiroz on 4/6/25.
+ */
 
 #include <stdlib.h>
 #include "queue.h"
 
+/** @copydoc create_queue */
 queue_t* create_queue(void){
     queue_t *q = malloc(sizeof(queue_t));
     q->head = NULL;
@@ -15,6 +33,7 @@ queue_t* create_queue(void){
     return q;
 }
 
+/** @copydoc enqueue */
 void enqueue(queue_t *q, request_t *request){
     // create new node
     node_t *new_node = malloc(sizeof(node_t));
@@ -30,6 +49,7 @@ void enqueue(queue_t *q, request_t *request){
     q->tail = new_node;
 }
 
+/** @copydoc dequeue */
 request_t* dequeue(queue_t *q){
     if(q->head == NULL){
         // no elements in the queue
