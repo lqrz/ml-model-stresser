@@ -130,6 +130,7 @@ void forward_to_worker(const char *message, char *response) {
  *
  * @return 0 on success, non-zero on error
  */
+#ifndef UNIT_TEST
 int main(void) {
     spawn_workers();
 
@@ -168,3 +169,4 @@ int main(void) {
 
     return 0;
 }
+#endif
