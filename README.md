@@ -68,7 +68,7 @@ A lightweight **C server** accepts requests and fans them out to multiple **Pyth
     - Receives a message.
     - Sends back a canned response (placeholder for model output).
   - Contains commented hints for parsing JSON and returning actual predictions.
-- The C server also supports [`worker_predictor.py`](worker_predictor.py) for real model-serving.
+- The C server also supports [`worker/worker.py`](worker.py) for real model-serving.
 - **Defaults:**
   - Server port: `6160`
   - Worker base port: `9001`
