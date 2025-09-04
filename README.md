@@ -1,6 +1,6 @@
 # ML model stresser
 ![](https://img.shields.io/badge/version-v1.0.0-brightgreen.svg)
-![C](https://img.shields.io/badge/C-GCC11-orange.svg)
+![C](https://img.shields.io/badge/C-GCC11-brightgreen.svg)
 ![Python 3.9](https://img.shields.io/badge/python-3.9-brightgreen.svg)(https://www.python.org/downloads/release/python-3/)
 
 
