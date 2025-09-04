@@ -1,4 +1,8 @@
-# ml-model-stresser
+# ML model stresser
+![](https://img.shields.io/badge/version-v1.0.0-brightgreen.svg)
+![C11](https://img.shields.io/badge/C-GCC11-orange.svg)
+![Python 3.9](https://img.shields.io/badge/python-3.9-brightgreen.svg)](https://www.python.org/downloads/release/python-3/)
+
 
 A small framework to **stress-test Python ML models** with concurrent inference locally.  
 C handles **fast I/O** and process management, while Python workers handle the actual ML prediction.  
